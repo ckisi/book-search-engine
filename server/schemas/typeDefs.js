@@ -1,80 +1,38 @@
-const { User } = require('../models');
-const { signToken } = require('../utils/auth');
+const { gql } = require('apollo-server-express');
 
-const resolvers = {
-  
-  // queries for getting
-  Query: {
-    async getSingleUser(_, { id, username }) {
-      const foundUser = await User.findOne({
-        $or: [{ _id: id }, { username }],
-      });
+const typeDefs = gql`
+  type User {
+    _id: ID!
+    username: String!
+    email: String!
+    savedBooks: [Book]
+  }
 
-      if (!foundUser) {
-        throw new Error('Cannot find user with this id');
-      }
+  type Book {
+    bookId: String!
+    authors: [String]
+    description: String
+    title: String
+    image: String
+    link: String
+  }
 
-      return foundUser;
-    },
-    async me(_, __, context) {
-      if (context.user) {
-        const foundUser = await User.findById(context.user._id);
-        return foundUser;
-      }
-      throw new Error('Not logged in');
-    },
-  },
+  type Auth {
+    token: ID!
+    user: User
+  }
 
-  // mutations for posting and deleting
-  Mutation: {
-    async createUser(_, { username, email, password }) {
-      const user = await User.create({ username, email, password });
+  type Query {
+    getSingleUser(id: ID, username: String): User
+    me: User
+  }
 
-      if (!user) {
-        throw new Error('Cannot find user');
-      }
-      const token = signToken(user);
-      return { token, user };
-    },
-    async login(_, { username, email, password }) {
-      const user = await User.findOne({ $or: [{ username }, { email }] });
-      if (!user) {
-        throw new Error("Cannot find user");
-      }
+  type Mutation {
+    addUser(username: String!, email: String!, password: String!): Auth
+    login(username: String, email: String, password: String!): Auth
+    saveBook(bookId: String!, authors: [String], description: String, title: String, image: String, link: String): User
+    removeBook(bookId: String!): User
+  }
+`;
 
-      const correctPw = await user.isCorrectPassword(password);
-      if (!correctPw) {
-        throw new Error('Wrong password');
-      }
-      const token = signToken(user);
-      return { token, user };
-    },
-    async saveBook(_, { bookId, authors, description, title, image, link }, context) {
-      if (context.user) {
-        const updatedUser = await User.findOneAndUpdate(
-          { _id: context.user._id },
-          { $addToSet: { savedBooks: { bookId, authors, description, title, image, link } } },
-          { new: true, runValidators: true }
-        );
-        return updatedUser;
-      }
-      throw new Error('Not logged in');
-    },
-    async deleteBook(_, { bookId }, context) {
-      if (context.user) {
-        const updatedUser = await User.findOneAndUpdate(
-          { _id: context.user._id },
-          { $pull: { savedBooks: { bookId } } },
-          { new: true }
-        );
-        if (!updatedUser) {
-          throw new Error("Cannot find user with this id");
-        }
-        return updatedUser;
-      }
-      throw new Error('Not logged in');
-    },
-  },
-};
-
-module.exports = resolvers;
+module.exports = typeDefs;
