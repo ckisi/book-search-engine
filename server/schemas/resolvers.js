@@ -27,6 +27,7 @@ const resolvers = {
 
   // mutations for posting and deleting
   Mutation: {
+    // login user
     async login(_, { username, email, password }) {
       const user = await User.findOne({ $or: [{ username }, { email }] });
       if (!user) {
@@ -40,6 +41,7 @@ const resolvers = {
       const token = signToken(user);
       return { token, user };
     },
+    // add a user
     async addUser(_, { username, email, password }) {
       const user = await User.create({ username, email, password });
 
@@ -49,6 +51,7 @@ const resolvers = {
       const token = signToken(user);
       return { token, user };
     },
+    // save book to user
     async saveBook(_, { bookId, authors, description, title, image, link }, context) {
       if (context.user) {
         const updatedUser = await User.findOneAndUpdate(
@@ -60,6 +63,7 @@ const resolvers = {
       }
       throw new Error('Not logged in');
     },
+    // remove book from user
     async removeBook(_, { bookId }, context) {
       if (context.user) {
         const updatedUser = await User.findOneAndUpdate(
